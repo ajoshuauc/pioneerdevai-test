@@ -34,7 +34,9 @@ export async function executeController(
     res.json(result);
   } catch (error) {
     if (error instanceof HttpError) {
-      res.status(error.statusCode).json({ error: error.message });
+      const body: { error: string; code?: string } = { error: error.message };
+      if (error.code) body.code = error.code;
+      res.status(error.statusCode).json(body);
       return;
     }
 

@@ -68,18 +68,31 @@ export async function searchFoursquare(params: InterpretedSearch): Promise<Fours
 
   const url = `${FOURSQUARE_BASE_URL}?${searchParams.toString()}`;
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-      'X-Places-Api-Version': FOURSQUARE_API_VERSION,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+        'X-Places-Api-Version': FOURSQUARE_API_VERSION,
+      },
+    });
+  } catch {
+    throw new HttpError(
+      503,
+      'The search service is temporarily unavailable. Please try again.',
+      'FOURSQUARE_ERROR',
+    );
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`Foursquare API error (${response.status}): ${errorBody}`);
-    throw new HttpError(502, 'The search service is temporarily unavailable. Please try again.');
+    throw new HttpError(
+      502,
+      'The search service is temporarily unavailable. Please try again.',
+      'FOURSQUARE_ERROR',
+    );
   }
 
   const data = (await response.json()) as FoursquareSearchResponse;

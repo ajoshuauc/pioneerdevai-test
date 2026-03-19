@@ -25,19 +25,20 @@ Return ONLY valid JSON with these fields:
   - "gibberish" if the message is nonsensical, random characters, or has no discernible meaning
   - "off_topic" if the message is a real sentence but unrelated to finding restaurants or food
   - "restaurant_search" for valid restaurant/food search queries
+- "locationSpecified": boolean — true if the user explicitly mentioned a location, city, neighbourhood, or area. false if no location was mentioned.
 - "query": string — the cuisine, food type, or restaurant name to search for (e.g., "sushi", "pizza", "Italian")
 - "near": string — the location/area mentioned (e.g., "downtown Los Angeles", "Manhattan, NYC")
 - "openNow": boolean — true if the user wants places open now, otherwise omit
 - "minPrice": number (1-4) — minimum price level if a price preference is mentioned (1=cheapest, 4=most expensive). For "cheap", use minPrice=1, maxPrice=2. For "expensive", use minPrice=3, maxPrice=4.
 - "maxPrice": number (1-4) — maximum price level
-- "sort": one of "RELEVANCE", "RATING", "DISTANCE", "POPULARITY" — if the user mentions "best", "top rated", or "highly rated", use "RATING". If "nearby" or "closest", use "DISTANCE". If "popular" or "trending", use "POPULARITY". Otherwise omit.
+- "sort": one of "RELEVANCE", "DISTANCE" — if the user wants results sorted by proximity (e.g. "nearby", "nearest", "closest", "near me", "walking distance", "closest to me"), use "DISTANCE". Otherwise omit.
 - "limit": number (1-50) — only if the user specifies a number of results
 
 Rules:
-- Always include "intent", "query", and "near".
-- If intent is "gibberish" or "off_topic", use default values for query ("restaurant") and near ("New York").
+- Always include "intent", "locationSpecified", "query", and "near".
+- If intent is "gibberish" or "off_topic", set locationSpecified to false, use default values for query ("restaurant") and near ("New York").
 - If no cuisine is mentioned, use "restaurant" for query.
-- If no location is mentioned, use "New York" as default for near.
+- If no location is mentioned, set locationSpecified to false and use "New York" as the value for near.
 - Only include optional fields if clearly implied by the user's message.
 - Return ONLY the JSON object, no explanation or markdown.`;
 
@@ -86,6 +87,7 @@ export async function interpretMessage(
         throw new HttpError(
           422,
           'That doesn\'t look like a valid request. Try something like "sushi near downtown LA".',
+          'GIBBERISH',
         );
       }
 
@@ -93,6 +95,15 @@ export async function interpretMessage(
         throw new HttpError(
           422,
           'I can only help with restaurant searches. Try "cheap Italian food in Manhattan".',
+          'OFF_TOPIC',
+        );
+      }
+
+      if (!result.data.locationSpecified) {
+        throw new HttpError(
+          422,
+          'Please include a location in your search, e.g. "sushi in downtown LA" or "pizza near Times Square".',
+          'MISSING_LOCATION',
         );
       }
 
@@ -106,5 +117,6 @@ export async function interpretMessage(
   throw new HttpError(
     503,
     'Could not understand your request after multiple attempts. Please try rephrasing.',
+    'SERVICE_ERROR',
   );
 }
