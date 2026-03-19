@@ -24,11 +24,21 @@ describe('interpretedSearchSchema', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
       locationSpecified: false,
+      near: 'New York',
     });
 
     expect(result.success).toBe(true);
     expect(result.data?.query).toBe('restaurant');
     expect(result.data?.near).toBe('New York');
+  });
+
+  it('rejects missing near field', () => {
+    const result = interpretedSearchSchema.safeParse({
+      intent: 'restaurant_search',
+      locationSpecified: false,
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it('accepts gibberish intent', () => {
