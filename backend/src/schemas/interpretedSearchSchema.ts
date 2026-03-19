@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const interpretedSearchSchema = z.object({
+  intent: z.enum(['restaurant_search', 'gibberish', 'off_topic']),
   query: z.string().min(1).default('restaurant'),
   near: z.string().min(1).default('New York'),
   openNow: z.boolean().optional(),

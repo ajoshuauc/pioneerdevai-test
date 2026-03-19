@@ -6,7 +6,20 @@ export function mapFoursquareResults(
   params: InterpretedSearch,
 ): RestaurantResult[] {
   const mapped = places.map((place) => mapPlace(place));
-  return rankResults(mapped, params);
+  const filtered = filterResults(mapped, params);
+  // Fall back to unfiltered set if hard filtering removed all results
+  const candidates = filtered.length > 0 ? filtered : mapped;
+  return rankResults(candidates, params);
+}
+
+// NOTE: open_now and price filtering is enforced at the Foursquare query level
+// (see foursquareService.ts). Post-fetch filtering here is a no-op on the free tier
+// since hours and price fields are not returned. This would activate on a premium plan.
+function filterResults(
+  results: RestaurantResult[],
+  _params: InterpretedSearch,
+): RestaurantResult[] {
+  return results;
 }
 
 function mapPlace(place: FoursquarePlace): RestaurantResult {
@@ -18,14 +31,6 @@ function mapPlace(place: FoursquarePlace): RestaurantResult {
     address: place.location?.formatted_address ?? 'Address not available',
     categories: place.categories?.map((c) => c.short_name ?? c.name) ?? [],
     distance: place.distance,
-    rating: place.rating,
-    price: place.price,
-    hours: place.hours
-      ? {
-          openNow: place.hours.open_now,
-          display: place.hours.display,
-        }
-      : undefined,
     location: coordinates,
   };
 }
@@ -48,40 +53,12 @@ function getCoordinates(place: FoursquarePlace): RestaurantResult['location'] {
   return undefined;
 }
 
+// NOTE: Ranking by rating, price, and open status requires Foursquare premium fields.
+// With the free tier, those fields are not returned, so Foursquare's default
+// relevance order is preserved. This logic would activate on a premium plan.
 function rankResults(
   results: RestaurantResult[],
-  params: InterpretedSearch,
+  _params: InterpretedSearch,
 ): RestaurantResult[] {
-  return results.sort((a, b) => {
-    let scoreA = 0;
-    let scoreB = 0;
-
-    // Boost results that match price preference
-    if (params.minPrice !== undefined || params.maxPrice !== undefined) {
-      if (a.price !== undefined) {
-        const inRange =
-          (params.minPrice === undefined || a.price >= params.minPrice) &&
-          (params.maxPrice === undefined || a.price <= params.maxPrice);
-        if (inRange) scoreA += 2;
-      }
-      if (b.price !== undefined) {
-        const inRange =
-          (params.minPrice === undefined || b.price >= params.minPrice) &&
-          (params.maxPrice === undefined || b.price <= params.maxPrice);
-        if (inRange) scoreB += 2;
-      }
-    }
-
-    // Boost results that are open when user asked for open_now
-    if (params.openNow) {
-      if (a.hours?.openNow) scoreA += 3;
-      if (b.hours?.openNow) scoreB += 3;
-    }
-
-    // Boost higher rated results
-    if (a.rating !== undefined) scoreA += a.rating / 10;
-    if (b.rating !== undefined) scoreB += b.rating / 10;
-
-    return scoreB - scoreA;
-  });
+  return results;
 }

@@ -8,12 +8,6 @@ export interface RestaurantResult {
   address: string;
   categories: string[];
   distance?: number | undefined;
-  rating?: number | undefined;
-  price?: number | undefined;
-  hours?: {
-    openNow?: boolean | undefined;
-    display?: string | undefined;
-  } | undefined;
   location?: {
     lat: number;
     lng: number;

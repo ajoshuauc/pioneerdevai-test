@@ -14,12 +14,6 @@ export interface RestaurantResult {
   address: string;
   categories: string[];
   distance?: number;
-  rating?: number;
-  price?: number;
-  hours?: {
-    openNow?: boolean;
-    display?: string;
-  };
   location?: {
     lat: number;
     lng: number;

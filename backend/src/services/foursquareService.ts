@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { HttpError } from '../utils/httpError.js';
 import type { InterpretedSearch } from '../types/search.js';
 
 const FOURSQUARE_BASE_URL = 'https://places-api.foursquare.com/places/search';
@@ -77,7 +78,8 @@ export async function searchFoursquare(params: InterpretedSearch): Promise<Fours
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Foursquare API error (${response.status}): ${errorBody}`);
+    console.error(`Foursquare API error (${response.status}): ${errorBody}`);
+    throw new HttpError(502, 'The search service is temporarily unavailable. Please try again.');
   }
 
   const data = (await response.json()) as FoursquareSearchResponse;

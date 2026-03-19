@@ -38,8 +38,8 @@ export async function executeController(
       return;
     }
 
-    console.error('Execute endpoint error:', error);
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    res.status(500).json({ error: message });
+    // True unexpected error — nothing we threw intentionally
+    console.error('Unexpected error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
