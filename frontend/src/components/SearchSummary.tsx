@@ -11,31 +11,21 @@ export function SearchSummary({ interpreted }: SearchSummaryProps) {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-blue-800 mb-2">Interpreted Search</h3>
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          🔍 {interpreted.query}
+    <div className="w-full flex flex-wrap items-center gap-2 text-xs text-gray-400">
+      <span className="font-medium text-gray-500">Searched:</span>
+      <span className="bg-gray-100 px-2 py-0.5 rounded-md">🔍 {interpreted.query}</span>
+      <span className="bg-gray-100 px-2 py-0.5 rounded-md">📍 {interpreted.near}</span>
+      {interpreted.openNow && (
+        <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-md">🕐 Open Now</span>
+      )}
+      {(interpreted.minPrice || interpreted.maxPrice) && (
+        <span className="bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-md">
+          💰 {priceLabel(interpreted.minPrice)}{interpreted.maxPrice && interpreted.minPrice ? '–' : ''}{priceLabel(interpreted.maxPrice)}
         </span>
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          📍 {interpreted.near}
-        </span>
-        {interpreted.openNow && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-            🕐 Open Now
-          </span>
-        )}
-        {(interpreted.minPrice || interpreted.maxPrice) && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            💰 {priceLabel(interpreted.minPrice)}{interpreted.maxPrice && interpreted.minPrice ? ' - ' : ''}{priceLabel(interpreted.maxPrice)}
-          </span>
-        )}
-        {interpreted.sort && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-            ↕️ {interpreted.sort}
-          </span>
-        )}
-      </div>
+      )}
+      {interpreted.sort && (
+        <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md">↕️ {interpreted.sort}</span>
+      )}
     </div>
   );
 }

@@ -88,6 +88,20 @@ export async function searchFoursquare(params: InterpretedSearch): Promise<Fours
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`Foursquare API error (${response.status}): ${errorBody}`);
+
+    if (response.status === 400) {
+      let parsed: { message?: string } = {};
+      try { parsed = JSON.parse(errorBody); } catch { /* non-JSON body, fall through */ }
+
+      if (parsed.message?.includes('near param')) {
+        throw new HttpError(
+          422,
+          `We couldn't find the location "${params.near}". Check for typos and try a city or neighborhood — e.g., "Manhattan, NYC".`,
+          'UNKNOWN_LOCATION',
+        );
+      }
+    }
+
     throw new HttpError(
       502,
       'The search service is temporarily unavailable. Please try again.',

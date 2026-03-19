@@ -5,12 +5,13 @@ import type { SearchResponse } from '../types/restaurant';
 const MIN_MESSAGE_LENGTH = 3;
 const MAX_MESSAGE_LENGTH = 500;
 
-export type ErrorKind = 'gibberish' | 'off_topic' | 'missing_location' | 'service' | 'unknown';
+export type ErrorKind = 'gibberish' | 'off_topic' | 'missing_location' | 'unknown_location' | 'service' | 'unknown';
 
 const ERROR_CODE_MAP: Record<string, ErrorKind> = {
   GIBBERISH: 'gibberish',
   OFF_TOPIC: 'off_topic',
   MISSING_LOCATION: 'missing_location',
+  UNKNOWN_LOCATION: 'unknown_location',
   SERVICE_ERROR: 'service',
   FOURSQUARE_ERROR: 'service',
 };

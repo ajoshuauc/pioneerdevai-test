@@ -4,36 +4,37 @@ interface RestaurantCardProps {
   restaurant: RestaurantResult;
 }
 
+function formatDistance(meters?: number): string | null {
+  if (meters === undefined) return null;
+  const miles = meters / 1609.34;
+  return `${miles.toFixed(1)} mi`;
+}
+
 export function RestaurantCard({ restaurant }: RestaurantCardProps) {
+  const distance = formatDistance(restaurant.distance);
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 hover:shadow-md transition-shadow">
-      <h3 className="text-lg font-semibold text-gray-900 leading-tight mb-2">
-        {restaurant.name}
-      </h3>
-
-      {restaurant.categories.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {restaurant.categories.map((cat) => (
-            <span
-              key={cat}
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600"
-            >
-              {cat}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <p className="text-sm text-gray-600 mb-3">{restaurant.address}</p>
-
-      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-        {restaurant.distance !== undefined && (
-          <span>
-            📍 {restaurant.distance >= 1000
-              ? `${(restaurant.distance / 1000).toFixed(1)} km`
-              : `${restaurant.distance} m`}
-          </span>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+      <div className="p-4 min-w-0">
+        <h3 className="text-base font-semibold text-gray-900 leading-tight truncate">
+          {restaurant.name}
+        </h3>
+        {restaurant.categories.length > 0 && (
+          <p className="text-sm text-gray-500 mt-0.5 truncate">
+            {restaurant.categories.join(' · ')}
+          </p>
         )}
+
+        {distance && (
+          <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
+            <span className="text-gray-400">◎</span> {distance}
+          </p>
+        )}
+
+        <p className="text-sm text-gray-500 mt-1 flex items-center gap-1 truncate">
+          <span className="text-gray-400 shrink-0">◉</span>
+          {restaurant.address}
+        </p>
       </div>
     </div>
   );
