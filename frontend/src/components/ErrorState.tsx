@@ -1,5 +1,8 @@
 import type { ErrorKind } from '../hooks/useRestaurantSearch';
 
+// Guidance: user input just needs refinement — shown in amber
+const GUIDANCE_KINDS = new Set<ErrorKind>(['gibberish', 'off_topic', 'missing_location', 'unknown_location']);
+
 const HEADINGS: Record<ErrorKind, string> = {
   gibberish: 'We couldn\u2019t understand that.',
   off_topic: 'That doesn\u2019t seem food related.',
@@ -25,9 +28,27 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ message, kind = 'unknown', onRetry }: ErrorStateProps) {
-  const showRetry = kind === 'service' || kind === 'unknown';
+  const isGuidance = GUIDANCE_KINDS.has(kind);
   const heading = HEADINGS[kind];
   const subtext = SUBTEXTS[kind] || message;
+
+  if (isGuidance) {
+    return (
+      <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 mt-0.5">
+            <svg className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">{heading}</p>
+            <p className="text-sm text-amber-700 mt-0.5">{subtext}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-red-50 border border-red-200 rounded-xl p-5">
@@ -40,7 +61,7 @@ export function ErrorState({ message, kind = 'unknown', onRetry }: ErrorStatePro
         <div>
           <p className="text-sm font-semibold text-red-700">{heading}</p>
           <p className="text-sm text-red-600 mt-0.5">{subtext}</p>
-          {showRetry && onRetry && (
+          {onRetry && (
             <button
               onClick={onRetry}
               className="mt-3 px-4 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"

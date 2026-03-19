@@ -17,6 +17,7 @@ function mockOpenAI(...contents: (string | null)[]) {
 function validResponse(overrides: Record<string, unknown> = {}) {
   return JSON.stringify({
     intent: 'restaurant_search',
+    locationSpecified: true,
     query: 'sushi',
     near: 'downtown LA',
     ...overrides,
@@ -37,14 +38,14 @@ describe('interpretMessage', () => {
 
   it('passes optional fields through', async () => {
     const client = mockOpenAI(
-      validResponse({ openNow: true, minPrice: 1, maxPrice: 2, sort: 'RATING', limit: 5 }),
+      validResponse({ openNow: true, minPrice: 1, maxPrice: 2, sort: 'DISTANCE', limit: 5 }),
     );
     const result = await interpretMessage('cheap rated sushi in LA open now', client);
 
     expect(result.openNow).toBe(true);
     expect(result.minPrice).toBe(1);
     expect(result.maxPrice).toBe(2);
-    expect(result.sort).toBe('RATING');
+    expect(result.sort).toBe('DISTANCE');
     expect(result.limit).toBe(5);
   });
 
@@ -52,29 +53,29 @@ describe('interpretMessage', () => {
 
   it('throws 422 HttpError for gibberish input', async () => {
     const client = mockOpenAI(
-      JSON.stringify({ intent: 'gibberish', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'gibberish', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     );
 
     await expect(interpretMessage('fdjhasoddsajod', client)).rejects.toThrow(HttpError);
     await expect(interpretMessage('fdjhasoddsajod', mockOpenAI(
-      JSON.stringify({ intent: 'gibberish', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'gibberish', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     ))).rejects.toThrow(/valid request/);
   });
 
   it('throws 422 HttpError for off-topic input', async () => {
     const client = mockOpenAI(
-      JSON.stringify({ intent: 'off_topic', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'off_topic', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     );
 
     await expect(interpretMessage('make me a sandwich', client)).rejects.toThrow(HttpError);
     await expect(interpretMessage('make me a sandwich', mockOpenAI(
-      JSON.stringify({ intent: 'off_topic', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'off_topic', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     ))).rejects.toThrow(/restaurant searches/);
   });
 
   it('returns correct HTTP status code for gibberish', async () => {
     const client = mockOpenAI(
-      JSON.stringify({ intent: 'gibberish', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'gibberish', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     );
 
     try {
@@ -88,7 +89,7 @@ describe('interpretMessage', () => {
 
   it('returns correct HTTP status code for off-topic', async () => {
     const client = mockOpenAI(
-      JSON.stringify({ intent: 'off_topic', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'off_topic', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     );
 
     try {
@@ -98,6 +99,30 @@ describe('interpretMessage', () => {
       expect(err).toBeInstanceOf(HttpError);
       expect((err as HttpError).statusCode).toBe(422);
     }
+  });
+
+  it('throws 422 HttpError when no location is specified', async () => {
+    const client = mockOpenAI(
+      JSON.stringify({ intent: 'restaurant_search', locationSpecified: false, query: 'sushi', near: 'New York' }),
+    );
+
+    try {
+      await interpretMessage('best sushi open now', client);
+      expect.unreachable('Should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(HttpError);
+      expect((err as HttpError).statusCode).toBe(422);
+      expect((err as HttpError).message).toMatch(/location/);
+    }
+  });
+
+  it('does not retry when missing-location HttpError is thrown', async () => {
+    const client = mockOpenAI(
+      JSON.stringify({ intent: 'restaurant_search', locationSpecified: false, query: 'pizza', near: 'New York' }),
+    );
+
+    await expect(interpretMessage('best pizza', client)).rejects.toThrow(HttpError);
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
   });
 
   // ── Retry logic ──────────────────────────────────────────
@@ -111,7 +136,7 @@ describe('interpretMessage', () => {
   });
 
   it('retries on schema validation failure and succeeds', async () => {
-    // First response: valid JSON but missing required "intent" field
+    // First response: valid JSON but missing required fields
     const bad = JSON.stringify({ query: 'tacos', near: 'Austin' });
     const good = validResponse({ query: 'tacos', near: 'Austin' });
     const client = mockOpenAI(bad, good);
@@ -162,7 +187,7 @@ describe('interpretMessage', () => {
 
   it('does not retry when gibberish HttpError is thrown', async () => {
     const client = mockOpenAI(
-      JSON.stringify({ intent: 'gibberish', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'gibberish', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     );
 
     await expect(interpretMessage('xyzzy', client)).rejects.toThrow(HttpError);
@@ -171,7 +196,7 @@ describe('interpretMessage', () => {
 
   it('does not retry when off-topic HttpError is thrown', async () => {
     const client = mockOpenAI(
-      JSON.stringify({ intent: 'off_topic', query: 'restaurant', near: 'New York' }),
+      JSON.stringify({ intent: 'off_topic', locationSpecified: false, query: 'restaurant', near: 'New York' }),
     );
 
     await expect(interpretMessage('tell me a joke', client)).rejects.toThrow(HttpError);

@@ -5,12 +5,13 @@ describe('interpretedSearchSchema', () => {
   it('accepts a valid restaurant_search input with all fields', () => {
     const input = {
       intent: 'restaurant_search',
+      locationSpecified: true,
       query: 'sushi',
       near: 'downtown LA',
       openNow: true,
       minPrice: 1,
       maxPrice: 3,
-      sort: 'RATING',
+      sort: 'DISTANCE',
       limit: 10,
     };
 
@@ -22,6 +23,7 @@ describe('interpretedSearchSchema', () => {
   it('accepts minimal valid input with defaults', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
+      locationSpecified: false,
     });
 
     expect(result.success).toBe(true);
@@ -32,6 +34,7 @@ describe('interpretedSearchSchema', () => {
   it('accepts gibberish intent', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'gibberish',
+      locationSpecified: false,
       query: 'restaurant',
       near: 'New York',
     });
@@ -43,6 +46,7 @@ describe('interpretedSearchSchema', () => {
   it('accepts off_topic intent', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'off_topic',
+      locationSpecified: false,
       query: 'restaurant',
       near: 'New York',
     });
@@ -51,8 +55,19 @@ describe('interpretedSearchSchema', () => {
     expect(result.data?.intent).toBe('off_topic');
   });
 
+  it('rejects missing locationSpecified field', () => {
+    const result = interpretedSearchSchema.safeParse({
+      intent: 'restaurant_search',
+      query: 'tacos',
+      near: 'Austin',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects missing intent field', () => {
     const result = interpretedSearchSchema.safeParse({
+      locationSpecified: true,
       query: 'tacos',
       near: 'Austin',
     });
@@ -63,6 +78,7 @@ describe('interpretedSearchSchema', () => {
   it('rejects invalid intent value', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'unknown',
+      locationSpecified: true,
       query: 'tacos',
       near: 'Austin',
     });
@@ -73,6 +89,7 @@ describe('interpretedSearchSchema', () => {
   it('rejects minPrice out of range', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
+      locationSpecified: true,
       query: 'tacos',
       near: 'Austin',
       minPrice: 5,
@@ -84,6 +101,7 @@ describe('interpretedSearchSchema', () => {
   it('rejects maxPrice out of range', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
+      locationSpecified: true,
       query: 'tacos',
       near: 'Austin',
       maxPrice: 0,
@@ -95,6 +113,7 @@ describe('interpretedSearchSchema', () => {
   it('rejects invalid sort value', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
+      locationSpecified: true,
       query: 'tacos',
       near: 'Austin',
       sort: 'ALPHABETICAL',
@@ -106,6 +125,7 @@ describe('interpretedSearchSchema', () => {
   it('rejects limit above 50', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
+      locationSpecified: true,
       query: 'tacos',
       near: 'Austin',
       limit: 100,
@@ -117,6 +137,7 @@ describe('interpretedSearchSchema', () => {
   it('rejects empty query string', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
+      locationSpecified: true,
       query: '',
       near: 'Austin',
     });
