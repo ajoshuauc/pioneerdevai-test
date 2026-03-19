@@ -6,6 +6,8 @@ import { env } from './config/env.js';
 
 export const app = express();
 
+app.set('trust proxy', 1);
+
 const allowedOrigins = env.FRONTEND_ORIGINS
   .split(',')
   .map((origin) => origin.trim())
