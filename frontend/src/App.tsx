@@ -7,7 +7,7 @@ import { EmptyState } from './components/EmptyState'
 import { useRestaurantSearch } from './hooks/useRestaurantSearch'
 
 function App() {
-  const { data, isLoading, error, search, reset } = useRestaurantSearch()
+  const { data, isLoading, error, errorKind, search, reset } = useRestaurantSearch()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -23,7 +23,7 @@ function App() {
 
         {isLoading && <LoadingState />}
 
-        {error && <ErrorState message={error} onRetry={reset} />}
+        {error && <ErrorState message={error} kind={errorKind ?? undefined} onRetry={reset} />}
 
         {data && (
           <>
