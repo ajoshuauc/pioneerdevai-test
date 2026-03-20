@@ -34,7 +34,7 @@ Extract these fields:
 - "openNow": boolean | null — true if the user wants places open now, otherwise null
 - "minPrice": number (1-4) — minimum price level if a price preference is mentioned (1=cheapest, 4=most expensive). For "cheap", use minPrice=1, maxPrice=2. For "expensive", use minPrice=3, maxPrice=4.
 - "maxPrice": number (1-4) | null — maximum price level
-- "sort": one of "RELEVANCE", "DISTANCE" | null — if the user wants results sorted by proximity (e.g. "nearby", "nearest", "closest", "near me", "walking distance", "closest to me"), use "DISTANCE". Otherwise null.
+- "sort": one of "RELEVANCE", "DISTANCE" | null — use "DISTANCE" only when the user explicitly asks for proximity-based ranking (e.g. "nearby", "nearest", "closest", "near me", "walking distance", "closest to me", "around here"). Do not use "DISTANCE" when the user is only specifying a search area such as "in Manila", "near Brooklyn", or "downtown Los Angeles".
 - "limit": number (1-50) | null — only if the user specifies a number of results, otherwise null
 
 Rules:
