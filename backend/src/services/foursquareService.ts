@@ -54,10 +54,10 @@ export async function searchFoursquare(params: InterpretedSearch): Promise<Fours
   if (params.openNow) {
     searchParams.set('open_now', 'true');
   }
-  if (params.minPrice !== undefined) {
+  if (params.minPrice != null) {
     searchParams.set('min_price', String(params.minPrice));
   }
-  if (params.maxPrice !== undefined) {
+  if (params.maxPrice != null) {
     searchParams.set('max_price', String(params.maxPrice));
   }
   if (params.sort) {

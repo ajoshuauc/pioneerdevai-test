@@ -8,6 +8,11 @@ const baseParams: InterpretedSearch = {
   locationSpecified: true,
   query: 'sushi',
   near: 'downtown LA',
+  openNow: null,
+  minPrice: null,
+  maxPrice: null,
+  sort: null,
+  limit: null,
 };
 
 type LoosePlaceOverrides = { [K in keyof FoursquarePlace]?: FoursquarePlace[K] | undefined };

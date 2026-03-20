@@ -20,11 +20,17 @@ describe('interpretedSearchSchema', () => {
     expect(result.data).toMatchObject(input);
   });
 
-  it('accepts minimal valid input with defaults', () => {
+  it('accepts minimal valid input with nullable fields', () => {
     const result = interpretedSearchSchema.safeParse({
       intent: 'restaurant_search',
       locationSpecified: false,
+      query: 'restaurant',
       near: 'New York',
+      openNow: null,
+      minPrice: null,
+      maxPrice: null,
+      sort: null,
+      limit: null,
     });
 
     expect(result.success).toBe(true);
@@ -47,6 +53,11 @@ describe('interpretedSearchSchema', () => {
       locationSpecified: false,
       query: 'restaurant',
       near: 'New York',
+      openNow: null,
+      minPrice: null,
+      maxPrice: null,
+      sort: null,
+      limit: null,
     });
 
     expect(result.success).toBe(true);
@@ -59,6 +70,11 @@ describe('interpretedSearchSchema', () => {
       locationSpecified: false,
       query: 'restaurant',
       near: 'New York',
+      openNow: null,
+      minPrice: null,
+      maxPrice: null,
+      sort: null,
+      limit: null,
     });
 
     expect(result.success).toBe(true);

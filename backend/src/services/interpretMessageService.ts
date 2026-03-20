@@ -1,8 +1,13 @@
 import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import { env } from '../config/env.js';
 import { interpretedSearchSchema } from '../schemas/interpretedSearchSchema.js';
 import { HttpError } from '../utils/httpError.js';
 import type { InterpretedSearch } from '../types/search.js';
+
+const RESPONSE_FORMAT = zodResponseFormat(interpretedSearchSchema, 'search');
+const MAX_TRANSIENT_RETRIES = 2;
+const BASE_RETRY_DELAY_MS = 100;
 
 let openaiClient: OpenAI | null = null;
 
@@ -16,11 +21,9 @@ function getOpenAIClient(): OpenAI {
   return openaiClient;
 }
 
-const MAX_RETRIES = 2;
-
 const SYSTEM_PROMPT = `You are a restaurant search query interpreter. Given a user's natural language request, extract structured search parameters.
 
-Return ONLY valid JSON with these fields:
+Extract these fields:
 - "intent": one of "restaurant_search", "gibberish", "off_topic"
   - "gibberish" if the message is nonsensical, random characters, or has no discernible meaning
   - "off_topic" if the message is a real sentence but unrelated to finding restaurants or food
@@ -28,95 +31,113 @@ Return ONLY valid JSON with these fields:
 - "locationSpecified": boolean — true if the user explicitly mentioned a location, city, neighbourhood, or area. false if no location was mentioned.
 - "query": string — the cuisine, food type, or restaurant name to search for (e.g., "sushi", "pizza", "Italian")
 - "near": string — the location/area mentioned (e.g., "downtown Los Angeles", "Manhattan, NYC")
-- "openNow": boolean — true if the user wants places open now, otherwise omit
+- "openNow": boolean | null — true if the user wants places open now, otherwise null
 - "minPrice": number (1-4) — minimum price level if a price preference is mentioned (1=cheapest, 4=most expensive). For "cheap", use minPrice=1, maxPrice=2. For "expensive", use minPrice=3, maxPrice=4.
-- "maxPrice": number (1-4) — maximum price level
-- "sort": one of "RELEVANCE", "DISTANCE" — if the user wants results sorted by proximity (e.g. "nearby", "nearest", "closest", "near me", "walking distance", "closest to me"), use "DISTANCE". Otherwise omit.
-- "limit": number (1-50) — only if the user specifies a number of results
+- "maxPrice": number (1-4) | null — maximum price level
+- "sort": one of "RELEVANCE", "DISTANCE" | null — if the user wants results sorted by proximity (e.g. "nearby", "nearest", "closest", "near me", "walking distance", "closest to me"), use "DISTANCE". Otherwise null.
+- "limit": number (1-50) | null — only if the user specifies a number of results, otherwise null
 
 Rules:
 - Always include "intent", "locationSpecified", "query", and "near".
 - If intent is "gibberish" or "off_topic", set locationSpecified to false, use default values for query ("restaurant") and near ("New York").
 - If no cuisine is mentioned, use "restaurant" for query.
 - If no location is mentioned, set locationSpecified to false and use "New York" as the value for near.
-- Only include optional fields if clearly implied by the user's message.
-- Return ONLY the JSON object, no explanation or markdown.`;
+- For openNow, minPrice, maxPrice, sort, and limit, use null when the user's message does not clearly imply a value.`;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRetryDelayMs(attempt: number): number {
+  return BASE_RETRY_DELAY_MS * 2 ** attempt;
+}
+
+function shouldRetryOpenAIError(error: unknown): boolean {
+  return error instanceof OpenAI.APIConnectionError
+    || error instanceof OpenAI.APIConnectionTimeoutError
+    || error instanceof OpenAI.RateLimitError
+    || error instanceof OpenAI.InternalServerError
+    || error instanceof OpenAI.ConflictError;
+}
+
+async function parseMessageWithRetry(
+  openai: OpenAI,
+  message: string,
+): Promise<InterpretedSearch> {
+  for (let attempt = 0; attempt <= MAX_TRANSIENT_RETRIES; attempt++) {
+    try {
+      const completion = await openai.chat.completions.parse({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: message },
+        ],
+        temperature: 0,
+        max_tokens: 200,
+        response_format: RESPONSE_FORMAT,
+      });
+
+      const result = completion.choices[0]?.message?.parsed;
+      if (!result) {
+        throw new HttpError(
+          503,
+          'Empty response from AI. Please try again.',
+          'SERVICE_ERROR',
+        );
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+
+      const isLastAttempt = attempt === MAX_TRANSIENT_RETRIES;
+      if (isLastAttempt || !shouldRetryOpenAIError(error)) {
+        break;
+      }
+
+      await sleep(getRetryDelayMs(attempt));
+    }
+  }
+
+  throw new HttpError(
+    503,
+    'Could not understand your request. Please try rephrasing.',
+    'SERVICE_ERROR',
+  );
+}
 
 export async function interpretMessage(
   message: string,
   client?: OpenAI,
 ): Promise<InterpretedSearch> {
   const openai = client ?? getOpenAIClient();
-  let lastError: string | null = null;
+  const result = await parseMessageWithRetry(openai, message);
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: message },
-      ];
-
-      if (lastError) {
-        messages.push({
-          role: 'user',
-          content: `Your previous response was invalid: ${lastError}. Return strictly valid JSON matching the required schema.`,
-        });
-      }
-
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages,
-        temperature: 0,
-        max_tokens: 200,
-        response_format: { type: 'json_object' },
-      });
-
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('Empty response from AI');
-      }
-
-      const parsed: unknown = JSON.parse(content);
-
-      const result = interpretedSearchSchema.safeParse(parsed);
-      if (!result.success) {
-        throw new Error(result.error.issues.map((i) => i.message).join(', '));
-      }
-
-      if (result.data.intent === 'gibberish') {
-        throw new HttpError(
-          422,
-          'That doesn\'t look like a valid request. Try something like "sushi near downtown LA".',
-          'GIBBERISH',
-        );
-      }
-
-      if (result.data.intent === 'off_topic') {
-        throw new HttpError(
-          422,
-          'I can only help with restaurant searches. Try "cheap Italian food in Manhattan".',
-          'OFF_TOPIC',
-        );
-      }
-
-      if (!result.data.locationSpecified) {
-        throw new HttpError(
-          422,
-          'Please include a location in your search, e.g. "sushi in downtown LA" or "pizza near Times Square".',
-          'MISSING_LOCATION',
-        );
-      }
-
-      return result.data;
-    } catch (err) {
-      if (err instanceof HttpError) throw err;
-      lastError = err instanceof Error ? err.message : String(err);
-    }
+  if (result.intent === 'gibberish') {
+    throw new HttpError(
+      422,
+      'That doesn\'t look like a valid request. Try something like "sushi near downtown LA".',
+      'GIBBERISH',
+    );
   }
 
-  throw new HttpError(
-    503,
-    'Could not understand your request after multiple attempts. Please try rephrasing.',
-    'SERVICE_ERROR',
-  );
+  if (result.intent === 'off_topic') {
+    throw new HttpError(
+      422,
+      'I can only help with restaurant searches. Try "cheap Italian food in Manhattan".',
+      'OFF_TOPIC',
+    );
+  }
+
+  if (!result.locationSpecified) {
+    throw new HttpError(
+      422,
+      'Please include a location in your search, e.g. "sushi in downtown LA" or "pizza near Times Square".',
+      'MISSING_LOCATION',
+    );
+  }
+
+  return result;
 }

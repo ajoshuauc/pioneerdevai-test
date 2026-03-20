@@ -1,11 +1,11 @@
 export interface InterpretedSearch {
   query: string;
   near: string;
-  openNow?: boolean;
-  minPrice?: number;
-  maxPrice?: number;
-  sort?: string;
-  limit?: number;
+  openNow: boolean | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  sort: string | null;
+  limit: number | null;
 }
 
 export interface RestaurantResult {
