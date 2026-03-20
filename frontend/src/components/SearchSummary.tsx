@@ -5,8 +5,8 @@ interface SearchSummaryProps {
 }
 
 export function SearchSummary({ interpreted }: SearchSummaryProps) {
-  const priceLabel = (level?: number) => {
-    if (!level) return null;
+  const priceLabel = (level: number | null | undefined) => {
+    if (level == null) return null;
     return '$'.repeat(level);
   };
 
@@ -18,9 +18,9 @@ export function SearchSummary({ interpreted }: SearchSummaryProps) {
       {interpreted.openNow && (
         <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-md">🕐 Open Now</span>
       )}
-      {(interpreted.minPrice || interpreted.maxPrice) && (
+      {(interpreted.minPrice != null || interpreted.maxPrice != null) && (
         <span className="bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-md">
-          💰 {priceLabel(interpreted.minPrice)}{interpreted.maxPrice && interpreted.minPrice ? '–' : ''}{priceLabel(interpreted.maxPrice)}
+          💰 {priceLabel(interpreted.minPrice)}{interpreted.maxPrice != null && interpreted.minPrice != null ? '–' : ''}{priceLabel(interpreted.maxPrice)}
         </span>
       )}
       {interpreted.sort && (
