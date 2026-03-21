@@ -13,8 +13,8 @@ const HEADINGS: Record<ErrorKind, string> = {
 };
 
 const SUBTEXTS: Record<ErrorKind, string> = {
-  gibberish: 'Try something like "sushi near me" or "Italian restaurant downtown".',
-  off_topic: 'Try describing a cuisine, dish, or vibe — e.g., "cozy ramen spot in downtown LA".',
+  gibberish: 'Try something like "Cheap sushi near Los Angeles" or "Italian restaurant downtown".',
+  off_topic: 'Try describing a cuisine, dish, or vibe — e.g., "Cozy ramen spot in downtown LA".',
   missing_location: 'Include a city or neighborhood, e.g., "Thai food near campus, Austin".',
   unknown_location: 'Check for typos and try a city or neighborhood — e.g., "Manhattan, NYC" or "downtown Austin".',
   service: 'Please try again in a moment.',

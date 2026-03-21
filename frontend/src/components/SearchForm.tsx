@@ -47,7 +47,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder='Try "cozy Italian place near downtown" or "best sushi open late"'
+            placeholder='Try "Cozy Italian place near Manhattan" or "Cheap steakhouse open now in Austin"'
             maxLength={MAX_MESSAGE_LENGTH}
             aria-invalid={isTooShort || isTooLong ? 'true' : 'false'}
             className="w-full pl-11 pr-10 py-3.5 border-2 border-[#E8825C] rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E8825C]/30 focus:border-[#E8825C] text-sm"
